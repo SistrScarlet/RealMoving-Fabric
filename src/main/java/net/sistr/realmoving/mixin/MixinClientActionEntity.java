@@ -34,7 +34,7 @@ public abstract class MixinClientActionEntity extends MixinActionEntity {
     @Inject(at = @At("RETURN"), method = "tick")
     public void postTick(CallbackInfo ci) {
         if (!this.hasVehicle()) {
-            boolean isActioning = ((IActionable) this).isActioning();
+            boolean isActioning = ((IActionable) this).isActioning_RealMoving();
             if (isActioning != this.actioningSend) {
                 Networking.sendPressAction(isActioning ? Networking.ActionType.ACTION_TRUE : Networking.ActionType.ACTION_FALSE);
                 this.actioningSend = isActioning;
@@ -44,13 +44,13 @@ public abstract class MixinClientActionEntity extends MixinActionEntity {
 
     @Inject(at = @At("RETURN"), method = "isInSneakingPose", cancellable = true)
     public void onIsCrouching(CallbackInfoReturnable<Boolean> cir) {
-        if (isCrawling() || isClimbing()) {
+        if (isCrawling_RealMoving() || isClimbing_RealMoving()) {
             cir.setReturnValue(false);
         }
     }
 
     @Override
-    public boolean isActioning() {
+    public boolean isActioning_RealMoving() {
         return actioning;
     }
 

@@ -4,8 +4,8 @@ import io.netty.buffer.Unpooled;
 import net.fabricmc.fabric.api.network.ClientSidePacketRegistry;
 import net.fabricmc.fabric.api.network.ServerSidePacketRegistry;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.PacketByteBuf;
 import net.sistr.realmoving.RealMovingMod;
 import net.sistr.realmoving.util.IActionable;
 
@@ -28,22 +28,22 @@ public class Networking {
                 }
                 switch (type) {
                     case ACTION_TRUE:
-                        ((IActionable)player).setActioning(true);
+                        ((IActionable)player).setActioning_RealMoving(true);
                         break;
                     case ACTION_FALSE:
-                        ((IActionable)player).setActioning(false);
+                        ((IActionable)player).setActioning_RealMoving(false);
                         break;
                     case CRAWLING_TRUE:
-                        ((IActionable)player).setCrawling(true);
+                        ((IActionable)player).setCrawling_RealMoving(true);
                         break;
                     case CRAWLING_FALSE:
-                        ((IActionable)player).setCrawling(false);
+                        ((IActionable)player).setCrawling_RealMoving(false);
                         break;
                     case CLIMBING_TRUE:
-                        ((IActionable)player).setClimbing(true);
+                        ((IActionable)player).setClimbing_RealMoving(true);
                         break;
                     case CLIMBING_FALSE:
-                        ((IActionable)player).setClimbing(false);
+                        ((IActionable)player).setClimbing_RealMoving(false);
                         break;
                 }
 

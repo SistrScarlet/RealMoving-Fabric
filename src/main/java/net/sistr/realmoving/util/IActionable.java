@@ -2,20 +2,20 @@ package net.sistr.realmoving.util;
 
 public interface IActionable {
 
-    void setActioning(boolean actioning);
+    void setActioning_RealMoving(boolean actioning);
 
-    boolean isActioning();
+    boolean isActioning_RealMoving();
 
-    void setCrawling(boolean crawling);
+    void setCrawling_RealMoving(boolean crawling);
 
-    boolean isCrawling();
+    boolean isCrawling_RealMoving();
 
-    boolean isSliding();
+    boolean isSliding_RealMoving();
 
-    void setClimbing(boolean climbing);
+    void setClimbing_RealMoving(boolean climbing);
 
-    boolean isClimbing();
+    boolean isClimbing_RealMoving();
 
-    float getClimbHeight();
+    float getClimbHeight_RealMoving();
 
 }

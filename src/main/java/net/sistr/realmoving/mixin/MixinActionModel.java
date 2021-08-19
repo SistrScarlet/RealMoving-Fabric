@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(BipedEntityModel.class)
 public abstract class MixinActionModel<T extends LivingEntity> extends AnimalModel<T> {
 
-    @Shadow public float field_3396;
+    @Shadow public float leaningPitch;
     @Shadow public ModelPart leftArm;
     @Shadow public ModelPart rightArm;
     @Shadow public ModelPart rightLeg;
@@ -40,7 +40,7 @@ public abstract class MixinActionModel<T extends LivingEntity> extends AnimalMod
             //0 < x < limbRange
             float limb = limbSwing % limbRange;
             //0 < x <= 1
-            float swim = this.handSwingProgress > 0.0F ? 0.0F : this.field_3396;
+            float swim = this.handSwingProgress > 0.0F ? 0.0F : this.leaningPitch;
 
             float armD = 165F;
             float armU = 180F;
@@ -52,7 +52,7 @@ public abstract class MixinActionModel<T extends LivingEntity> extends AnimalMod
             float legO = 20F;
 
             //PlayerModelをMixinしてやろうと思ったけど別にPlayerModelはプレイヤー限定ではないのだ…
-            if (entityIn instanceof IActionable && ((IActionable) entityIn).isSliding()) {
+            if (entityIn instanceof IActionable && ((IActionable) entityIn).isSliding_RealMoving()) {
                 this.leftArm.pitch = MathHelper.lerp(swim, this.leftArm.pitch, -armU * rad);
                 this.leftArm.yaw = MathHelper.lerp(swim, this.leftArm.yaw, 0F * rad);
                 this.leftArm.roll = MathHelper.lerp(swim, this.leftArm.roll, armO * rad);
@@ -101,7 +101,7 @@ public abstract class MixinActionModel<T extends LivingEntity> extends AnimalMod
                 this.rightLeg.pitch = lerp(swim, this.rightLeg.pitch, half, -legD, -legU);
                 this.rightLeg.roll = lerp(swim, this.rightLeg.roll, pct, legO, legI);
             }
-        } else if (entityIn instanceof IActionable && ((IActionable) entityIn).isClimbing()) {
+        } else if (entityIn instanceof IActionable && ((IActionable) entityIn).isClimbing_RealMoving()) {
             float pct = climbProgress((IActionable) entityIn);
             float armC = 5F;
             float armU = 160F;
@@ -122,7 +122,7 @@ public abstract class MixinActionModel<T extends LivingEntity> extends AnimalMod
     }
 
     private static float climbProgress(IActionable actionable) {
-        float climbHeight = actionable.getClimbHeight();
+        float climbHeight = actionable.getClimbHeight_RealMoving();
         return 1F - MathHelper.clamp(climbHeight / 2F, 0F, 1F);
     }
 

@@ -21,7 +21,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(PlayerEntity.class)
 public abstract class MixinActionEntity extends LivingEntity implements IActionable {
-    @Shadow public abstract EntityDimensions getDimensions(EntityPose pose);
+    @Shadow
+    public abstract EntityDimensions getDimensions(EntityPose pose);
 
     private final ClimbBlockData[] climbBlockData = new ClimbBlockData[4];
     private boolean actioning;
@@ -39,7 +40,7 @@ public abstract class MixinActionEntity extends LivingEntity implements IActiona
     public void onUpdatePose(CallbackInfo ci) {
         updateClimbing();
         updateCrawling();
-        if (((IActionable) this).isCrawling() && this.wouldPoseNotCollide(EntityPose.SWIMMING)) {
+        if (((IActionable) this).isCrawling_RealMoving() && this.wouldPoseNotCollide(EntityPose.SWIMMING)) {
             setPose(EntityPose.SWIMMING);
             ci.cancel();
         }
@@ -47,34 +48,35 @@ public abstract class MixinActionEntity extends LivingEntity implements IActiona
 
     @Inject(at = @At("RETURN"), method = "tick")
     public void postTick(CallbackInfo ci) {
-        if (isSliding()) {
+        if (isSliding_RealMoving()) {
             Vec3d motion = getVelocity();
-            motion = motion.normalize().multiply((1F - (slideTime / 20F) * (slideTime / 20F)) * 0.2F);
-            setVelocity(getVelocity().multiply(0.6D).add(motion));
+            motion = motion.subtract(0, motion.getY(), 0).normalize()
+                    .multiply((1F - (slideTime / 20F) * (slideTime / 20F)) * 0.2F);
+            setVelocity(getVelocity().multiply(0.6D, 1D, 0.6D).add(motion));
             if (20 < ++slideTime) {
                 setSprinting(false);
             }
         } else {
             slideTime = 0;
         }
-        if (isClimbing() && !isSliding()) {
+        if (isClimbing_RealMoving() && !isSliding_RealMoving()) {
             fallDistance = 0;
             setVelocity(getVelocity().multiply(1D, 0, 1D));
-            float climbHeight = getClimbHeight();
+            float climbHeight = getClimbHeight_RealMoving();
             if (horizontalCollision) {
                 if (0.1 < climbHeight) {
                     setVelocity(getVelocity().add(0, 0.1D, 0));
-                } else if (isCrawling() &&
+                } else if (isCrawling_RealMoving() &&
                         (canHook(climbBlockData[0], climbBlockData[1], getHeight())
                                 || canHook(climbBlockData[1], climbBlockData[2], getHeight()))
                         || (canStand(climbBlockData[0], climbBlockData[1], climbBlockData[2], getHeight())
                         || canStand(climbBlockData[1], climbBlockData[2], climbBlockData[3], getHeight()))) {
                     setVelocity(getVelocity().add(0, 0.2, 0));
-                    setClimbing(false);
+                    setClimbing_RealMoving(false);
                 }
                 //サーバー側ではうまく発動しない(原因不明)
                 if (world.isClient && isSneaking() && climbHeight + getDimensions(EntityPose.SWIMMING).height < getHeight()) {
-                    setCrawling(true);
+                    setCrawling_RealMoving(true);
                     Networking.sendPressAction(Networking.ActionType.CRAWLING_TRUE);
                 }
             } else if (climbHeight < 2 - 0.2) {
@@ -84,31 +86,31 @@ public abstract class MixinActionEntity extends LivingEntity implements IActiona
     }
 
     public void updateCrawling() {
-        if (isCrawling()) {
-            setCrawling((!isTouchingWater() && !hasVehicle() && (isSneaking() || isActioning())));
+        if (isCrawling_RealMoving()) {
+            setCrawling_RealMoving((!isTouchingWater() && !hasVehicle() && (isSneaking() || isActioning_RealMoving())));
         } else {
-            setCrawling(onGround && !isTouchingWater() && !hasVehicle() && isSneaking() && isActioning() && !isClimbing());
+            setCrawling_RealMoving(onGround && !isTouchingWater() && !hasVehicle() && isSneaking() && isActioning_RealMoving() && !isClimbing_RealMoving());
         }
     }
 
     public void updateClimbing() {
         climbHeightCache = -1;
         //伏せを優先するため、着地かつスニーク中は発動しない
-        if (!(onGround && isSneaking() && !isCrawling()) && !hasVehicle() && !isTouchingWater() && isActioning()) {
-            float climbHeight = getClimbHeight();
-            boolean climbing = stepHeight < climbHeight || (isClimbing() && 0 < climbHeight);
-            setClimbing(climbing);
+        if (!(onGround && isSneaking() && !isCrawling_RealMoving()) && !hasVehicle() && !isTouchingWater() && isActioning_RealMoving()) {
+            float climbHeight = getClimbHeight_RealMoving();
+            boolean climbing = stepHeight < climbHeight || (isClimbing_RealMoving() && 0 < climbHeight);
+            setClimbing_RealMoving(climbing);
             if (climbing) {
                 this.climbHeightCache = climbHeight;
             }
         } else {
-            setClimbing(false);
+            setClimbing_RealMoving(false);
         }
     }
 
     //登れるブロックの上面がエンティティの底面よりどれだけ高いかを返す
     //-1 < x < 2
-    public float getClimbHeight() {
+    public float getClimbHeight_RealMoving() {
         if (this.climbHeightCache != -1) {
             return climbHeightCache;
         }
@@ -123,7 +125,7 @@ public abstract class MixinActionEntity extends LivingEntity implements IActiona
         float swimHeight = swimSize.height;
         if (canHook(standData, upData, swimHeight)) {
             return standData.getUp() - (float) getY();
-        } else if (!isCrawling() && canHook(upData, toData, swimHeight)) {
+        } else if (!isCrawling_RealMoving() && canHook(upData, toData, swimHeight)) {
             return upData.getUp() - (float) getY();
         } else if (canHook(downData, standData, swimHeight)) {
             return downData.getUp() - (float) getY();
@@ -144,7 +146,7 @@ public abstract class MixinActionEntity extends LivingEntity implements IActiona
     public ClimbBlockData getClimbBlockData(BlockPos pos) {
         VoxelShape shape = world.getBlockState(pos).getCollisionShape(world, pos);
         return shape.isEmpty() ? ClimbBlockData.DUMMY :
-                new ClimbBlockData(pos.getY(), (float) shape.getMaximum(Direction.Axis.Y), (float) shape.getMinimum(Direction.Axis.Y));
+                new ClimbBlockData(pos.getY(), (float) shape.getMax(Direction.Axis.Y), (float) shape.getMin(Direction.Axis.Y));
     }
 
     public BlockPos getBaseClimbBlock() {
@@ -153,36 +155,36 @@ public abstract class MixinActionEntity extends LivingEntity implements IActiona
     }
 
     @Override
-    public void setActioning(boolean actioning) {
+    public void setActioning_RealMoving(boolean actioning) {
         this.actioning = actioning;
     }
 
     @Override
-    public boolean isActioning() {
+    public boolean isActioning_RealMoving() {
         return this.actioning;
     }
 
     @Override
-    public void setCrawling(boolean crawling) {
+    public void setCrawling_RealMoving(boolean crawling) {
         this.crawling = crawling;
     }
 
     @Override
-    public boolean isCrawling() {
+    public boolean isCrawling_RealMoving() {
         return this.crawling;
     }
 
     @Override
-    public boolean isSliding() {
-        return isSprinting() && isCrawling();
+    public boolean isSliding_RealMoving() {
+        return isSprinting() && isCrawling_RealMoving();
     }
 
     @Override
-    public void setClimbing(boolean climbing) {
+    public void setClimbing_RealMoving(boolean climbing) {
         this.climbing = climbing;
     }
 
-    public boolean isClimbing() {
+    public boolean isClimbing_RealMoving() {
         return this.climbing;
     }
 
